@@ -1,12 +1,3 @@
 venv/
 __pycache__/
 *.pyc
-*.pyo
-.env
-*.egg-info/
-dist/
-build/
-.vscode/
-*.jpg
-*.jpeg
-*.png
