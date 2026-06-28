@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Card OCR</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            width: 460px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 24px;
+            color: #1a1a2e;
+            margin-bottom: 8px;
+        }
+
+        p.subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        .upload-area {
+            border: 2px dashed #c0c7d3;
+            border-radius: 10px;
+            padding: 40px 20px;
+            cursor: pointer;
+            transition: border-color 0.2s;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover { border-color: #4a90e2; }
+
+        .upload-area input[type="file"] {
+            display: none;
+        }
+
+        .upload-area label {
+            cursor: pointer;
+            display: block;
+        }
+
+        .upload-icon { font-size: 40px; margin-bottom: 10px; }
+
+        .upload-text {
+            color: #555;
+            font-size: 14px;
+        }
+
+        #file-name {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #4a90e2;
+            font-weight: 500;
+        }
+
+        .btn {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 8px;
+            font-size: 15px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+
+        .btn:hover { background: #357abd; }
+
+        .error {
+            background: #ffe0e0;
+            color: #c0392b;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>📇 Business Card OCR</h1>
+        <p class="subtitle">Upload a business card image to extract contact information</p>
+
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+
+        <form action="/predict" method="POST" enctype="multipart/form-data">
+            <div class="upload-area">
+                <label>
+                    <div class="upload-icon">📤</div>
+                    <div class="upload-text">Click to select a JPG or PNG image</div>
+                    <div id="file-name">No file selected</div>
+                    <input type="file" id="file-input" name="card_image" accept=".jpg,.jpeg,.png" onchange="updateFileName(this)">
+                </label>
+            </div>
+            <button type="submit" class="btn">Extract Information</button>
+        </form>
+    </div>
+
+    <script>
+        function updateFileName(input) {
+            const label = document.getElementById('file-name');
+            label.textContent = input.files[0] ? input.files[0].name : 'No file selected';
+        }
+    </script>
+</body>
+</html>

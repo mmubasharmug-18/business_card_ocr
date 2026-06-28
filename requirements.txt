@@ -7,3 +7,4 @@ spacy
 tqdm
 scipy
 matplotlib
+flask

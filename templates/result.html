@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Results - Business Card OCR</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f0f2f5;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 24px;
+            color: #1a1a2e;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 640px) {
+            .grid { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        .card h2 {
+            font-size: 16px;
+            color: #555;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .card img {
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid #eee;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 10px 12px;
+            font-size: 14px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        th {
+            color: #888;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 12px;
+        }
+
+        td:first-child {
+            font-weight: 600;
+            color: #4a90e2;
+            width: 90px;
+        }
+
+        td:last-child { color: #333; }
+
+        .badge {
+            display: inline-block;
+            background: #f0f6ff;
+            color: #2c6fad;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 13px;
+            margin: 2px 2px 2px 0;
+        }
+
+        .no-results {
+            color: #999;
+            font-size: 14px;
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .btn {
+            display: block;
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 8px;
+            font-size: 15px;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            max-width: 260px;
+            margin: 0 auto;
+            transition: background 0.2s;
+        }
+
+        .btn:hover { background: #357abd; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📇 Extracted Information</h1>
+
+        <div class="grid">
+            <!-- Annotated Image -->
+            <div class="card">
+                <h2>Annotated Card</h2>
+                <img src="{{ url_for('static', filename='uploads/' + image_file) }}" alt="Annotated business card">
+            </div>
+
+            <!-- Entity Table -->
+            <div class="card">
+                <h2>Detected Entities</h2>
+                {% if entities %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entity_type, values in entities.items() %}
+                        <tr>
+                            <td>{{ entity_type }}</td>
+                            <td>
+                                {% for v in values %}
+                                <span class="badge">{{ v }}</span>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="no-results">No entities detected. Try a clearer image.</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <a href="/" class="btn">⬆ Try Another Card</a>
+    </div>
+</body>
+</html>

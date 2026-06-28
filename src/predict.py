@@ -13,10 +13,6 @@ from src.clean_text import clean_text
 
 
 class GroupGenerator:
-    """
-    Assigns sequential integer group IDs to consecutive tokens
-    that share the same entity label.
-    """
     def __init__(self):
         self.id   = 0
         self.text = ''
@@ -31,11 +27,7 @@ class GroupGenerator:
 
 
 def parse_entity(text, label):
-    """
-    Clean and normalize an extracted entity based on its type.
-    """
     if label == 'PHONE':
-        text = text.lower()
         text = re.sub(r'\D', '', text)
 
     elif label == 'EMAIL':
@@ -56,40 +48,33 @@ def parse_entity(text, label):
         text = re.sub(r'[^a-z0-9 ]', '', text)
         text = text.title()
 
-    return text
+    return text.strip()
 
 
 def get_predictions(image, model_ner):
-    """
-    Full business card information extraction pipeline.
-
-    Args:
-        image     (numpy.ndarray): OpenCV BGR image of a business card.
-        model_ner (spacy.Language): Loaded trained spaCy NER model.
-
-    Returns:
-        tuple: (annotated_image, entities)
-    """
 
     # ── PART A: OCR ──────────────────────────────────────────────────────────
-
     raw_data = pytesseract.image_to_data(image)
     rows     = list(map(lambda x: x.split('\t'), raw_data.split('\n')))
     df       = pd.DataFrame(rows[1:], columns=rows[0])
     df.dropna(inplace=True)
+
+    df['conf'] = df['conf'].astype(float).astype(int)
+    df = df[df['conf'] >= OCR_CONF_THRESHOLD]
 
     df['text'] = df['text'].apply(clean_text)
     df_clean   = df[df['text'] != ''].copy()
     df_clean.reset_index(drop=True, inplace=True)
 
     content = " ".join(df_clean['text'].tolist())
-
+    print("DEBUG content:", content[:100])
 
     # ── PART B: NER ──────────────────────────────────────────────────────────
-
     doc      = model_ner(content)
     doc_json = doc.to_json()
     doc_text = doc_json['text']
+
+    print("DEBUG ents:", doc_json['ents'])
 
     tokens_df = pd.DataFrame(doc_json['tokens'])
     tokens_df['token'] = tokens_df.apply(
@@ -104,9 +89,7 @@ def get_predictions(image, model_ner):
     tokens_df = pd.merge(tokens_df, ents_df, how='left', on='start')
     tokens_df['label'] = tokens_df['label'].fillna('O')
 
-
     # ── PART C: ALIGN ────────────────────────────────────────────────────────
-
     df_clean = df_clean.copy()
     df_clean['end']   = df_clean['text'].apply(lambda x: len(x) + 1).cumsum() - 1
     df_clean['start'] = df_clean.apply(lambda row: row['end'] - len(row['text']), axis=1)
@@ -118,25 +101,25 @@ def get_predictions(image, model_ner):
         on='start'
     )
 
+    print("DEBUG dataframe_info labels:", dataframe_info['label'].value_counts().to_dict())
 
     # ── PART D: BOUNDING BOXES ───────────────────────────────────────────────
-
     bb_df = dataframe_info[dataframe_info['label'] != 'O'].copy()
     bb_df.reset_index(drop=True, inplace=True)
-
-    bb_df['label'] = bb_df['label'].apply(lambda x: x[2:] if len(x) > 2 else x)
-
-    grp_gen = GroupGenerator()
-    bb_df['group'] = bb_df['label'].apply(grp_gen.get_group)
-
-    bb_df[['left', 'top', 'width', 'height']] = \
-        bb_df[['left', 'top', 'width', 'height']].astype(int)
-    bb_df['right']  = bb_df['left'] + bb_df['width']
-    bb_df['bottom'] = bb_df['top']  + bb_df['height']
 
     annotated_image = image.copy()
 
     if len(bb_df) > 0:
+        bb_df['label'] = bb_df['label'].apply(lambda x: x[2:] if len(x) > 2 and x[1] == '-' else x)
+
+        grp_gen = GroupGenerator()
+        bb_df['group'] = bb_df['label'].apply(grp_gen.get_group)
+
+        bb_df[['left', 'top', 'width', 'height']] = \
+            bb_df[['left', 'top', 'width', 'height']].astype(int)
+        bb_df['right']  = bb_df['left'] + bb_df['width']
+        bb_df['bottom'] = bb_df['top']  + bb_df['height']
+
         img_tagging = bb_df[['left','top','right','bottom','label','token','group']] \
             .groupby('group') \
             .agg({
@@ -147,6 +130,8 @@ def get_predictions(image, model_ner):
                 'label' : lambda x: list(x)[0],
                 'token' : lambda x: " ".join(x)
             })
+
+        print("DEBUG img_tagging:\n", img_tagging[['label','token']])
 
         for _, row in img_tagging.iterrows():
             l = int(row['left'])
@@ -165,39 +150,25 @@ def get_predictions(image, model_ner):
                 2
             )
 
+        # ── PART E: ENTITY EXTRACTION ────────────────────────────────────────
+        entities = {k: [] for k in ['NAME', 'ORG', 'DES', 'PHONE', 'EMAIL', 'WEB']}
 
-    # ── PART E: ENTITY EXTRACTION ─────────────────────────────────────────────
+        for _, row in img_tagging.iterrows():
+            label = str(row['label']).strip()
+            token = str(row['token']).strip()
 
-    entities = {k: [] for k in ['NAME', 'ORG', 'DES', 'PHONE', 'EMAIL', 'WEB']}
-    info_array     = dataframe_info[['token', 'label']].values
-    previous_label = 'O'
+            if label not in entities:
+                continue
 
-    for token, label in info_array:
-        bio_tag   = label[0]
-        label_tag = label[2:]
+            parsed = parse_entity(token, label)
+            if parsed:
+                entities[label].append(parsed)
 
-        if bio_tag not in ('B', 'I'):
-            previous_label = 'O'
-            continue
+        print("DEBUG entities:", entities)
+        return annotated_image, entities
 
-        if label_tag not in entities:
-            previous_label = label_tag
-            continue
-
-        parsed = parse_entity(token, label_tag)
-
-        if bio_tag == 'B':
-            entities[label_tag].append(parsed)
-
-        elif bio_tag == 'I' and previous_label == label_tag and entities[label_tag]:
-            if label_tag in ('NAME', 'ORG', 'DES'):
-                entities[label_tag][-1] += ' ' + parsed
-            else:
-                entities[label_tag][-1] += parsed
-
-        previous_label = label_tag
-
-    return annotated_image, entities
+    print("DEBUG: no labeled tokens found")
+    return annotated_image, {k: [] for k in ['NAME', 'ORG', 'DES', 'PHONE', 'EMAIL', 'WEB']}
 
 
 if __name__ == '__main__':
@@ -221,11 +192,5 @@ if __name__ == '__main__':
             if values:
                 print(f"  {entity_type:<8}: {values}")
 
-        # Save image in case imshow doesn't work
         cv2.imwrite('test_prediction.jpg', annotated_img)
         print("\nAnnotated image saved as: test_prediction.jpg")
-
-        cv2.imshow('Business Card Prediction', annotated_img)
-        print("Press any key in the image window to close...")
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
