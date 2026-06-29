@@ -67,15 +67,13 @@ def get_predictions(image, model_ner):
     df_clean.reset_index(drop=True, inplace=True)
 
     content = " ".join(df_clean['text'].tolist())
-    print("DEBUG content:", content[:100])
-
+    
     # ── PART B: NER ──────────────────────────────────────────────────────────
     doc      = model_ner(content)
     doc_json = doc.to_json()
     doc_text = doc_json['text']
 
-    print("DEBUG ents:", doc_json['ents'])
-
+    
     tokens_df = pd.DataFrame(doc_json['tokens'])
     tokens_df['token'] = tokens_df.apply(
         lambda row: doc_text[row['start']:row['end']], axis=1
@@ -101,8 +99,7 @@ def get_predictions(image, model_ner):
         on='start'
     )
 
-    print("DEBUG dataframe_info labels:", dataframe_info['label'].value_counts().to_dict())
-
+    
     # ── PART D: BOUNDING BOXES ───────────────────────────────────────────────
     bb_df = dataframe_info[dataframe_info['label'] != 'O'].copy()
     bb_df.reset_index(drop=True, inplace=True)
@@ -131,8 +128,7 @@ def get_predictions(image, model_ner):
                 'token' : lambda x: " ".join(x)
             })
 
-        print("DEBUG img_tagging:\n", img_tagging[['label','token']])
-
+        
         for _, row in img_tagging.iterrows():
             l = int(row['left'])
             t = int(row['top'])
@@ -164,10 +160,8 @@ def get_predictions(image, model_ner):
             if parsed:
                 entities[label].append(parsed)
 
-        print("DEBUG entities:", entities)
         return annotated_image, entities
 
-    print("DEBUG: no labeled tokens found")
     return annotated_image, {k: [] for k in ['NAME', 'ORG', 'DES', 'PHONE', 'EMAIL', 'WEB']}
 
 

@@ -44,9 +44,6 @@ def predict():
     # Run prediction
     annotated_image, entities = get_predictions(image, model_ner)
 
-    # DEBUG
-    print("DEBUG entities:", entities)
-    print("DEBUG results:", {k: v for k, v in entities.items() if v})
 
     # Save annotated image
     filename    = f"{uuid.uuid4().hex}.jpg"
@@ -58,4 +55,4 @@ def predict():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=False)

@@ -1,9 +1,10 @@
 import os
 import pytesseract
+import platform
 
 # ── Tesseract path ────────────────────────────────────────────────────────────
-# Windows: update this if Tesseract is installed in a different location
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+if platform.system() == 'Windows':
+    pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
 # ── Project root ──────────────────────────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
