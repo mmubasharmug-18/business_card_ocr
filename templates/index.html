@@ -85,6 +85,11 @@
 
         .btn:hover { background: #357abd; }
 
+        .btn:disabled {
+            background: #9fc1e8;
+            cursor: not-allowed;
+        }
+
         .error {
             background: #ffe0e0;
             color: #c0392b;
@@ -92,6 +97,52 @@
             border-radius: 6px;
             margin-bottom: 16px;
             font-size: 13px;
+        }
+
+        /* ── Loading Overlay ───────────────────────────────────────────── */
+        #loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.97);
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        #loading-overlay.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #e0e7ff;
+            border-top: 5px solid #4a90e2;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 24px;
+        }
+
+        @keyframes spin {
+            0%   { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 16px;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .loading-subtext {
+            font-size: 13px;
+            color: #999;
         }
     </style>
 </head>
@@ -104,23 +155,40 @@
         <div class="error">{{ error }}</div>
         {% endif %}
 
-        <form action="/predict" method="POST" enctype="multipart/form-data">
+        <form action="/predict" method="POST" enctype="multipart/form-data" onsubmit="return showLoading()">
             <div class="upload-area">
                 <label>
                     <div class="upload-icon">📤</div>
                     <div class="upload-text">Click to select a JPG or PNG image</div>
                     <div id="file-name">No file selected</div>
-                    <input type="file" id="file-input" name="card_image" accept=".jpg,.jpeg,.png" onchange="updateFileName(this)">
+                    <input type="file" id="file-input" name="card_image" accept=".jpg,.jpeg,.png" onchange="updateFileName(this)" required>
                 </label>
             </div>
-            <button type="submit" class="btn">Extract Information</button>
+            <button type="submit" class="btn" id="submit-btn">Extract Information</button>
         </form>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <p class="loading-text">Extracting information from your card...</p>
+        <p class="loading-subtext">This usually takes a few seconds</p>
     </div>
 
     <script>
         function updateFileName(input) {
             const label = document.getElementById('file-name');
             label.textContent = input.files[0] ? input.files[0].name : 'No file selected';
+        }
+
+        function showLoading() {
+            const fileInput = document.getElementById('file-input');
+            if (!fileInput.files[0]) return false;
+
+            document.getElementById('loading-overlay').classList.add('active');
+            document.getElementById('submit-btn').disabled = true;
+            document.getElementById('submit-btn').textContent = 'Processing...';
+            return true;
         }
     </script>
 </body>
